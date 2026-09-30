@@ -1,11 +1,3 @@
-
-//
-//  ContentView.swift
-//  CraftJournal
-//
-//  Created by iMac01 on 9/29/26.
-//
-
 import SwiftUI
 internal import CoreData
 
@@ -26,6 +18,8 @@ struct ContentView: View {
     @State private var showingAddEntry = false
     @State private var searchText = ""
 
+    // MARK: - Filtered Entries
+
     private var filteredEntries: [CraftEntry] {
         if searchText.isEmpty {
             return Array(entries)
@@ -37,19 +31,27 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Body
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
 
                 // MARK: - Entry Count
+
                 Text("\(entries.count) \(entries.count == 1 ? "entry" : "entries")")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.top, 8)
                     .padding(.bottom, 4)
 
-                // MARK: - Journal Entries
+                // MARK: - Empty Journal / Entries List
+
                 if entries.isEmpty {
+
+                    // Task 3:
+                    // Show a friendly message when there are no entries.
+
                     ContentUnavailableView(
                         "No Entries Yet",
                         systemImage: "book.closed",
@@ -61,7 +63,12 @@ struct ContentView: View {
                         maxWidth: .infinity,
                         maxHeight: .infinity
                     )
+
                 } else if filteredEntries.isEmpty {
+
+                    // Show this when entries exist,
+                    // but none match the search.
+
                     ContentUnavailableView(
                         "No Matching Entries",
                         systemImage: "magnifyingglass",
@@ -73,7 +80,11 @@ struct ContentView: View {
                         maxWidth: .infinity,
                         maxHeight: .infinity
                     )
+
                 } else {
+
+                    // MARK: - Journal Entries
+
                     List {
                         ForEach(filteredEntries) { entry in
                             NavigationLink {
@@ -87,11 +98,20 @@ struct ContentView: View {
                     .listStyle(.plain)
                 }
             }
+
+            // MARK: - Search
+
             .searchable(
                 text: $searchText,
                 prompt: "Search by title"
             )
+
+            // MARK: - Navigation Title
+
             .navigationTitle("Craft Journal")
+
+            // MARK: - Add Button
+
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -101,6 +121,9 @@ struct ContentView: View {
                     }
                 }
             }
+
+            // MARK: - Add Entry Sheet
+
             .sheet(isPresented: $showingAddEntry) {
                 AddEntryView()
                     .environment(
@@ -127,7 +150,6 @@ struct ContentView: View {
     }
 }
 
-
 // MARK: - Entry Row
 
 struct EntryRow: View {
@@ -135,29 +157,43 @@ struct EntryRow: View {
 
     var body: some View {
         HStack {
+
+            // Favorite Star
             if entry.isFavorite {
                 Image(systemName: "star.fill")
                     .foregroundStyle(.yellow)
             }
 
+            // Photo
             if let data = entry.photo,
                let uiImage = UIImage(data: data) {
 
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 60, height: 60)
+                    .frame(
+                        width: 60,
+                        height: 60
+                    )
                     .clipShape(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(
+                            cornerRadius: 8
+                        )
                     )
 
             } else {
+
                 Image(systemName: "photo")
-                    .frame(width: 60, height: 60)
+                    .frame(
+                        width: 60,
+                        height: 60
+                    )
                     .foregroundStyle(.secondary)
             }
 
+            // Entry Information
             VStack(alignment: .leading) {
+
                 Text(entry.title ?? "Untitled")
                     .font(.headline)
 
@@ -177,14 +213,13 @@ struct EntryRow: View {
     }
 }
 
-
 // MARK: - Preview
 
 #Preview {
     ContentView()
         .environment(
             \.managedObjectContext,
-             PersistenceController.preview.container.viewContext
+            PersistenceController.preview.container.viewContext
         )
 }
 
