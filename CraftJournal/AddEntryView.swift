@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 internal import CoreData
 
 struct AddEntryView: View {
@@ -17,8 +18,13 @@ struct AddEntryView: View {
     "Troeko", "Tsharzo", "Thagzo", "Tshemzo", "Shagzo", "Deh-sho"]
 
     @State private var title = ""
+    @State private var artisanName = ""
     @State private var craftType = "Thagzo"
     @State private var notes = "" // Added notes state property
+    @State private var isFavorite = false
+    @State private var image: UIImage?
+    @State private var showingCamera = false
+    @State private var selectedPhoto: PhotosPickerItem? = nil
 
     private let navy = Color(
         red: 0.04,
@@ -71,6 +77,39 @@ struct AddEntryView: View {
                             }
                             .padding()
                             .background(Color.white)
+                            .foregroundColor(.black)
+                            .clipShape(
+                                RoundedRectangle(cornerRadius: 14)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(
+                                        navy.opacity(0.15),
+                                        lineWidth: 1
+                                    )
+                            )
+                        }
+
+                        // Artisan Name
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("ARTISAN NAME")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundStyle(navy)
+
+                            HStack {
+                                Image(systemName: "person")
+                                    .foregroundStyle(navy)
+
+                                TextField(
+                                    "Enter artisan name",
+                                    text: $artisanName
+                                )
+                                .textInputAutocapitalization(.words)
+                            }
+                            .padding()
+                            .background(Color.white)
+                            .foregroundColor(.black)
                             .clipShape(
                                 RoundedRectangle(cornerRadius: 14)
                             )
@@ -147,34 +186,77 @@ struct AddEntryView: View {
                             }
                         }
 
-                        // Notes section (Multiline text field)
                         // Notes Section (Editable Text Field)
-                                            VStack(alignment: .leading, spacing: 10) {
-                                                Text("NOTES (OPTIONAL)")
-                                                    .font(.caption)
-                                                    .fontWeight(.bold)
-                                                    .foregroundStyle(navy)
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("NOTES (OPTIONAL)")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundStyle(navy)
 
-                                                TextField(
-                                                    "Enter any additional notes",
-                                                    text: $notes,
-                                                    axis: .vertical
-                                                )
-                                                .lineLimit(3...6)
-                                                .padding()
-                                                .background(Color.white)
-                                                .clipShape(
-                                                    RoundedRectangle(cornerRadius: 14)
-                                                )
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 14)
-                                                        .stroke(
-                                                            navy.opacity(0.15),
-                                                            lineWidth: 1
-                                                        )
-                                                )
-                                            }
-                        
+                            TextField(
+                                "Enter any additional notes",
+                                text: $notes,
+                                axis: .vertical
+                            )
+                            .lineLimit(3...6)
+                            .padding()
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                            .clipShape(
+                                RoundedRectangle(cornerRadius: 14)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(
+                                        navy.opacity(0.15),
+                                        lineWidth: 1
+                                    )
+                            )
+                        }
+
+                        Toggle(isOn: $isFavorite) {
+                            HStack {
+                                Image(systemName: isFavorite ? "star.fill" : "star")
+                                    .foregroundStyle(isFavorite ? .yellow : .gray)
+                                Text("Mark as Favorite")
+                            }
+                        }
+                        .tint(.yellow)
+
+                        // Photo Section Added Below Picker/Inputs
+                        Section("Photo") {
+                            if let image {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxHeight: 250)
+                            }
+                            Button("Take Photo") {
+                                showingCamera = true
+                            }
+                            PhotosPicker(
+                                selection: $selectedPhoto,
+                                matching: .images,
+                                photoLibrary: .shared()
+                            ) {
+                                HStack {
+                                    Image(systemName: "photo.on.rectangle")
+                                    Text("Choose from Library")
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .onChange(of: selectedPhoto) { oldValue, newValue in
+                                if let item = newValue {
+                                    Task {
+                                        if let data = try? await item.loadTransferable(type: Data.self), let uiImage = UIImage(data: data) {
+                                            image = uiImage
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+
                         // Save button
                         Button {
                             saveEntry()
@@ -212,6 +294,10 @@ struct AddEntryView: View {
                 }
             }
             .navigationTitle("Add Entry")
+            .fullScreenCover(isPresented: $showingCamera) {
+                CameraView(image: $image)
+                    .ignoresSafeArea()
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(
@@ -239,9 +325,12 @@ struct AddEntryView: View {
 
         entry.id = UUID()
         entry.title = cleanedTitle
+        entry.artisanName = artisanName
         entry.craftType = craftType
         entry.date = Date()
         entry.notes = notes // Assigned notes to Core Data entity
+        entry.isFavorite = isFavorite
+        entry.photo = image?.jpegData(compressionQuality: 1.0)
 
         do {
             try viewContext.save()
@@ -252,3 +341,4 @@ struct AddEntryView: View {
         }
     }
 }
+
